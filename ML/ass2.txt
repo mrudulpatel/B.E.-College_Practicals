@@ -1,0 +1,45 @@
+import pandas as pd
+import numpy as np
+
+df = pd.read_csv("emails.csv")
+df.head()
+
+df.describe()
+
+df.info()
+
+df['Prediction'].value_counts()
+
+df.isnull().sum()
+
+#Drop first col
+df = df.drop('Email No.', axis=1)
+df.shape
+
+X = df.iloc[:,0:3000]
+X.shape
+
+y = df.iloc[:,-1]
+y.shape
+
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.10, random_state=42, shuffle = True)
+print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
+
+from sklearn.neighbors import KNeighborsClassifier
+neigh = KNeighborsClassifier(n_neighbors=2)
+neigh.fit(X_train, y_train)
+
+#Here, score method returns the accuracy
+neigh.score(X_test, y_test)
+
+from sklearn.pipeline import make_pipeline
+from sklearn.svm import SVC
+svm = make_pipeline(SVC(gamma='auto'))
+svm.fit(X_train, y_train)
+
+svm.score(X_test, y_test)
+
+# Observations
+# The training time of KNN classifier is significantly less than that of SVM. KNN classifier was trained in a few seconds while the SVM classifier took just over a minute to complete its training.
+# The accuracy on the testing set provided by the SVM classifier(92%) is significantly more than that of KNN classifier (88%).

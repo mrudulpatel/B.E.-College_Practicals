@@ -1,0 +1,187 @@
+import pandas as pd
+import numpy as np
+
+df = pd.read_csv("uber.csv")
+
+df.head()
+
+df.columns
+
+df.shape
+
+cln_df = df.drop('Unnamed: 0', axis=1)
+cln_df = cln_df.drop('key', axis=1)
+
+cln_df.shape
+
+cln_df['month'] = cln_df['pickup_datetime']
+cln_df.head()
+cln_df.month = cln_df.month.str.slice(start=5, stop=7)
+cln_df.head()
+
+cln_df['hour'] = cln_df['pickup_datetime']
+cln_df.hour = cln_df.hour.str.slice(start=11, stop=13)
+cln_df.head()
+
+cln_df.drop('pickup_datetime', axis=1, inplace=True)
+cln_df.shape
+
+cln_df.isnull().sum()
+
+cln_df.dropna(inplace=True)
+
+cln_df.shape
+
+cln_df.columns
+
+cln_df.head()
+
+# Outlier Detection
+import seaborn as sns
+from matplotlib.cbook import boxplot_stats 
+
+#Outliers for Fare Amount
+fare_amt_outliers = boxplot_stats(cln_df.fare_amount)[0]['fliers']
+fare_amt_outliers.sort()
+sns.boxplot(cln_df['fare_amount'])
+print(fare_amt_outliers)
+print(len(fare_amt_outliers))
+
+#remove outliers for fare amount
+Q1 = cln_df['fare_amount'].quantile(0.25)
+Q3 = cln_df['fare_amount'].quantile(0.75)
+IQR = Q3 - Q1  
+filter = (cln_df['fare_amount'] >= Q1 - 1.5 * IQR) & (cln_df['fare_amount'] <= Q3 + 1.5 *IQR)
+cln_df = cln_df.loc[filter]
+
+cln_df.shape
+
+#Outliers for latitudes and longitudes
+#Any value out of [-90, 90] and [-180,180] will be invalid
+def find_latitude_outliers(series):
+    ans = []
+    for i in series:
+        if(i<-90 or i>90):
+            ans.append(i)
+    return ans
+
+def find_longitude_outliers(series):
+    ans = []
+    for i in series:
+        if(i<-180 or i>180):
+            ans.append(i)
+    return ans
+
+
+pickup_longitude_outliers = find_longitude_outliers(cln_df['pickup_longitude'])
+pickup_latitude_outliers = find_latitude_outliers(cln_df['pickup_latitude'])
+dropoff_longitude_outliers = find_longitude_outliers(cln_df['dropoff_longitude'])
+dropoff_latitude_outliers = find_latitude_outliers(cln_df['dropoff_latitude'])
+print(len(pickup_longitude_outliers))
+print(len(pickup_latitude_outliers))
+print(len(dropoff_longitude_outliers))
+print(len(dropoff_latitude_outliers))
+
+#Outliers for Passenger count 
+passenger_count_outliers = boxplot_stats(cln_df.passenger_count)[0]['fliers']
+passenger_count_outliers.sort()
+sns.boxplot(cln_df['passenger_count'])
+print(passenger_count_outliers)
+print(len(passenger_count_outliers))
+filter = cln_df['passenger_count']<=6
+cln_df = cln_df.loc[filter]
+cln_df.shape
+
+correlation_matrix = cln_df.corr()
+
+
+correlation_matrix
+
+sns.heatmap(correlation_matrix, annot = True)
+
+convert_dict = {'month': int, 'hour':int}
+cln_df = cln_df.astype(convert_dict)
+
+correlation_matrix = cln_df.corr()
+correlation_matrix
+
+sns.heatmap(correlation_matrix)
+
+X = cln_df.iloc[:, 1:]
+y = cln_df.iloc[:, 0]
+print(X.shape, y.shape)
+
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.15, random_state=42)
+print(X_train.shape, y_train.shape, X_test.shape, y_test.shape)
+
+# Training and Testing
+from sklearn.linear_model import LinearRegression
+reg = LinearRegression().fit(X_train, y_train)
+
+reg.score(X_test, y_test)
+
+# Distance
+def haversine (lon_1, lon_2, lat_1, lat_2):
+    lon_1, lon_2, lat_1, lat_2 = map(np.radians, [lon_1, lon_2, lat_1, lat_2])
+    diff_lon = lon_2 - lon_1
+    diff_lat = lat_2 - lat_1
+    km = 2 * 6371 * np.arcsin(np.sqrt(np.sin(diff_lat/2.0)**2 + np.cos(lat_1) * np.cos(lat_2) * np.sin(diff_lon/2.0)**2))
+    return km
+
+
+cln_df['distance']= haversine(cln_df['pickup_longitude'],cln_df['dropoff_longitude'],cln_df['pickup_latitude'],cln_df['dropoff_latitude'])
+
+cln_df.head()
+
+correlation_matrix = cln_df.corr()
+correlation_matrix
+
+sns.heatmap(correlation_matrix)
+
+import matplotlib.pyplot as plt
+plt.scatter(cln_df['distance'], cln_df['fare_amount'])
+plt.xlabel("distance")
+plt.ylabel("fare_amount")
+
+#Outliers for Distance 
+distance_outliers = boxplot_stats(cln_df.distance)[0]['fliers']
+distance_outliers.sort()
+sns.boxplot(cln_df['distance'])
+print(distance_outliers)
+print(len(distance_outliers))
+
+filter = (cln_df['distance']<=50) & (cln_df['distance']>0)
+cln_df = cln_df.loc[filter]
+cln_df.shape
+
+plt.scatter(cln_df['distance'], cln_df['fare_amount'])
+plt.xlabel("distance")
+plt.ylabel("fare_amount")
+
+correlation_matrix = cln_df.corr()
+correlation_matrix
+
+sns.heatmap(correlation_matrix)
+
+X = cln_df.iloc[:, 1:]
+y = cln_df.iloc[:, 0]
+print(X.shape, y.shape)
+
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.15, random_state=42)
+print(X_train.shape, y_train.shape, X_test.shape, y_test.shape)
+
+from sklearn.linear_model import LinearRegression
+reg = LinearRegression().fit(X_train, y_train)
+
+reg.score(X_test, y_test)
+
+from sklearn.ensemble import RandomForestRegressor
+# Instantiate model with 5 decision trees
+rf = RandomForestRegressor(n_estimators = 10, random_state = 42)
+
+# Train the model on training data
+rf.fit(X_train, y_train);
+
+rf.score(X_test, y_test)

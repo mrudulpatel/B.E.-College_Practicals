@@ -1,0 +1,88 @@
+# Libraries for handling numeric computation and dataframes
+import pandas as pd
+import numpy as np
+# Libraries for statistical plotting
+import matplotlib.pyplot as plt
+import seaborn as sns
+%matplotlib inline
+
+import chardet
+with open("sales_data_sample.csv", 'rb') as rawdata:
+    result = chardet.detect(rawdata.read(100000))
+result
+
+sales= pd.read_csv('sales_data_sample.csv',sep=',',encoding='Windows-1252')
+
+print(sales.shape)
+
+sales.head()
+
+sales.describe()
+
+sales.info()
+
+sales.isnull().sum()
+
+# drop unwanted  features
+sales = sales.drop(columns=["ORDERDATE","CITY","STATUS","POSTALCODE","STATE", "TERRITORY", "CONTACTLASTNAME", "CONTACTFIRSTNAME","CUSTOMERNAME", "PHONE", "ORDERNUMBER", "ADDRESSLINE1", "ADDRESSLINE2"])
+
+sales.shape
+
+sales.head()
+
+sales.info()
+
+from sklearn.preprocessing import LabelEncoder
+labelencoder = LabelEncoder()
+sales['PRODUCTLINE'] = labelencoder.fit_transform(sales['PRODUCTLINE'])
+sales['COUNTRY'] = labelencoder.fit_transform(sales['COUNTRY'])
+sales['DEALSIZE'] = labelencoder.fit_transform(sales['DEALSIZE'])
+sales['PRODUCTCODE'] = labelencoder.fit_transform(sales['PRODUCTCODE'])
+sales.head(4)
+
+#Finding optimal number of clusters
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
+scaler = StandardScaler()
+scaled_data = scaler.fit_transform(sales)
+scores_1 = []
+range_of_cluster = range(1,10)
+for i in range_of_cluster:
+    kmeans = KMeans(n_clusters=i)
+    kmeans.fit(scaled_data)
+    scores_1.append(kmeans.inertia_)
+plt.plot(scores_1, 'r*-')
+plt.xticks(np.arange(len(scores_1)), np.arange(1, len(scores_1) +1) )
+plt.title('Elbow Method')
+plt.xlabel('no of clusters')
+plt.ylabel('Scores')
+plt.show()
+
+# selected number of clusters as 5. (n = 5) based on the above graph
+kmeans = KMeans(n_clusters=5,random_state=0)
+kmeans.fit(scaled_data)
+clusters_centers = pd.DataFrame(data=kmeans.cluster_centers_, columns=[sales.columns])
+y_kmeans = kmeans.predict(scaled_data)
+data_with_cluster = pd.concat([sales, pd.DataFrame({'CLUSTER': kmeans.labels_})], axis=1)
+data_with_cluster.head(10)
+
+print(clusters_centers)
+
+#pip install plotly
+
+from plotly.offline import init_notebook_mode, iplot
+init_notebook_mode(connected = True)
+
+#Dimension Reduce
+from sklearn.decomposition import PCA
+pca = PCA(n_components=3)
+principal_comp = pca.fit_transform(scaled_data)
+pca_df = pd.DataFrame(data=principal_comp, columns=['pca_1', 'pca_2', 'pca_3'])
+pca_df = pd.concat([pca_df, pd.DataFrame({'cluster':kmeans.labels_})], axis=1)
+#Showing
+import plotly
+import plotly.express as px
+fig = px.scatter_3d(pca_df, x='pca_1', y='pca_2', z= 'pca_3',color='cluster', symbol='cluster', size_max=20, opacity=0.6)
+fig.show()
+# fig = px.scatter(pca_df, x='pca_1', y='pca_2',color ='cluster',symbol='cluster')
+# fig.show()
